@@ -66,6 +66,8 @@ namespace PlacardAPI
         public string periodDescription { get; set; }
         public string retailSalesCloseDateTime { get; set; }
         public string promotionLevel { get; set; }
+        public List<Outcome> outcomes { get; set; }
+        public int eventIndex { get; set; }
     }
 
     public class Outcome
@@ -73,7 +75,7 @@ namespace PlacardAPI
         public int index { get; set; }
         public int outcomeId { get; set; }
         public string outcomeDescription { get; set; }
-        public int handicapValue { get; set; }
+        public decimal handicapValue { get; set; }
         public bool hidden { get; set; }
         public bool suspended { get; set; }
         public Price price { get; set; }
@@ -166,6 +168,11 @@ namespace PlacardAPI
             return result;
         }
 
-        private void Save2File(string response, string filePath) => File.WriteAllText(filePath, response);
+        private void Save2File(string response, string filePath)
+        {
+            FileInfo file = new FileInfo(filePath);
+            file.Directory.Create();
+            File.WriteAllText(file.FullName, response);
+        } 
     }
 }
