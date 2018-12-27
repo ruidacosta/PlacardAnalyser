@@ -11,5 +11,6 @@ namespace PlacardAnalyser.Analyser
         decimal CalcBetProbability();
         decimal CalcGainRatio();
         List<Event> GetBetEvents();
+        decimal GetBetValue();
     }
 }

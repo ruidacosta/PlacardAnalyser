@@ -4,6 +4,7 @@ namespace PlacardAnalyser.Configuration
     {
         public EmailSetts Email { get; set; }
         public BetSetts BetParams { get; set; }
+        public Storage Storage { get; set; }
         public AppSetts AppParams { get; set; }
     }
 
@@ -28,6 +29,13 @@ namespace PlacardAnalyser.Configuration
         public int NumberOfBets { get; set; }
         public decimal BetCash { get; set; }
         public int MaxEventsToProcess { get; set; }
+    }
+
+    public class Storage 
+    {
+        public string Type { get; set; }
+        public string ConnectionString { get; set; }
+        public string Database { get; set; }
     }
 
     public class AppSetts

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using log4net;
 using PlacardAnalyser.Configuration;
+using PlacardAnalyser.Storage;
 using PlacardAPI;
 
 namespace PlacardAnalyser.Analyser
@@ -33,6 +34,9 @@ namespace PlacardAnalyser.Analyser
 
             // Sent selected bets throw email
             SendBets(selectedBets);
+
+            //Store bet on Storage
+            StoreBets(selectedBets);
         }
 
         private APIResponse GetFullSportBook()
@@ -439,6 +443,24 @@ namespace PlacardAnalyser.Analyser
                     }
                 }
                 ++i;
+            }
+        }
+
+        private void StoreBets(List<IBet> selectedBets)
+        {
+            logger.Info("Storing bets...");
+            switch (Setts.Storage.Type.ToUpper())
+            {
+                case "MONGODB":
+                    logger.Info("Storing on MongoDb database...");
+                    var mongoFactory = new MongoDbFactory(Setts.Storage.ConnectionString,Setts.Storage.Database);
+                    mongoFactory.SaveBets(selectedBets);
+                    logger.InfoFormat("Stored on {0} in {1}"
+                        ,Setts.Storage.ConnectionString
+                        ,Setts.Storage.Database);
+                    break;
+                default:
+                    break;
             }
         }
     }

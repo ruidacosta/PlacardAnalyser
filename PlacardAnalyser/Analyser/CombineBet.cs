@@ -59,5 +59,10 @@ namespace PlacardAnalyser.Analyser
         {
             return this.BetEvents;
         }
+
+        public decimal GetBetValue()
+        {
+            return this.BetValue;
+        }
     }
 }

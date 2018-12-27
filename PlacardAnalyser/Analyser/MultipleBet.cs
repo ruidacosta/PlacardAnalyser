@@ -166,5 +166,10 @@ namespace PlacardAnalyser.Analyser
                     break;
             }
         }
+
+        public decimal GetBetValue()
+        {
+            return BetValue * this.BetCombinations.Count;
+        }
     }
 }
