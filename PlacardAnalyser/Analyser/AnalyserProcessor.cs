@@ -108,6 +108,11 @@ namespace PlacardAnalyser.Analyser
 
         private void ReduceEvents(ref List<Event> eventsList)
         {
+            var limitDate = DateTime.Now.Date.AddDays(1).AddHours(23).AddMinutes(59).AddSeconds(59);
+            var removeCounterByTime = eventsList.RemoveAll(x => x.EventDateTime > limitDate);
+            logger.InfoFormat("Removed {0} events that are not on next day.", removeCounterByTime);
+            
+            /*
             var tmpOdd = 1.01;
             while (eventsList.Count > Setts.BetParams.MaxEventsToProcess)
             {
@@ -116,7 +121,8 @@ namespace PlacardAnalyser.Analyser
                logger.InfoFormat("{0} events removed for odd {1}", removeCounter, tmpOdd);
             }
             logger.InfoFormat("Remaining events: {0}",eventsList.Count);
-            /*
+            */
+            
             while (eventsList.Count > Setts.BetParams.MaxEventsToProcess)
             {
                 Setts.BetParams.Risk -= (decimal)0.01;
@@ -124,7 +130,7 @@ namespace PlacardAnalyser.Analyser
                 logger.InfoFormat("{0} events removed for risk {1}", removeCounter, Setts.BetParams.Risk);
             }
             logger.InfoFormat("Remaining events: {0}",eventsList.Count);
-            */
+            
         }
 
         private List<IBet> GenerateBets(ref List<Event> eventsList)
