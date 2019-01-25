@@ -293,9 +293,45 @@ namespace PlacardAnalyser.Analyser
         {
             // select from bets where not probability < risk (settings)
             // Number of bets (settings) where max gain ratio 
+            Dictionary<string,int> eventCounter = new Dictionary<string, int>();
+            List<IBet> result = new List<IBet>();
             logger.InfoFormat("Selecting Bets...");
-            var list1 = generatedBets.Where(x => (1 - x.CalcBetProbability() <= Setts.BetParams.Risk));//.ToList();
-            return list1.OrderByDescending(x => x.CalcGainRatio()).Take(Setts.BetParams.NumberOfBets).ToList();
+            var list1 = generatedBets.Where(x => (1 - x.CalcBetProbability() <= Setts.BetParams.Risk))
+                .OrderByDescending(x => x.CalcGainRatio());//.Take(Setts.BetParams.NumberOfBets).ToList();
+            logger.InfoFormat("Pool size: {0} bets",list1.Count());
+            foreach (var bet in list1)
+            {
+                if (result.Count >= Setts.BetParams.NumberOfBets)
+                {
+                    break;
+                }
+                bool flag = true;
+                foreach(var event_ in bet.GetBetEvents())
+                {
+                    var key = string.Format("{0} - {1}",event_.Index, event_.Label);
+                    if (eventCounter.ContainsKey(key))
+                    {
+                        if (eventCounter[key] >= 2)
+                        {
+                            flag = false;
+                            break;
+                        }
+                        else
+                        {
+                            eventCounter[key]++;
+                        }
+                    }
+                    else
+                    {
+                        eventCounter.Add(key,1);
+                    }
+                }
+                if (flag)
+                {
+                    result.Add(bet);
+                }
+            }
+            return result;
         }
 
         private void SendBets(List<IBet> selectedBets)
