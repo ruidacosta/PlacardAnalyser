@@ -24,13 +24,31 @@ namespace PlacardAnalyser.Analyser
             // Get Events list based on settings parameters
             var eventsList = SelectEvents(ref fullSportBook);
             
-            // Reduce events to Max Events to process (configuration)
-            ReduceEvents(ref eventsList);
-            // Generate bets using combinations of events
+            // Remove events not for next day
+            EventsOnNextDay(ref eventsList);
+
+            // Single And Combined bets
             var generatedBets = GenerateBets(ref eventsList);
+
+            var selectedBets = SelectBets(ref generatedBets);
+
+            // Remove events on selectedBets from eventList
+            CleanEventsList(ref eventsList, selectedBets);
+
+            // Multiple Bets
+            ReduceEvents(ref eventsList);
+            var generatedMultipleBets = GenerateMultipleBets(ref eventsList);
+
+            var selectedMultipleBets = SelectedMultipleBets(ref generatedMultipleBets);
+
+            selectedBets.AddRange(selectedMultipleBets);
+            // Reduce events to Max Events to process (configuration)
+            // ReduceEvents(ref eventsList);
+            // Generate bets using combinations of events
+            // var generatedBets = GenerateBets(ref eventsList);
             
             // Select the ones with maximum return and lower risk
-            var selectedBets = SelectBets(ref generatedBets);
+            // var selectedBets = SelectBets(ref generatedBets);
 
             // Sent selected bets throw email
             SendBets(selectedBets);
@@ -106,13 +124,26 @@ namespace PlacardAnalyser.Analyser
             return result;
         }
 
-        private void ReduceEvents(ref List<Event> eventsList)
+        private void CleanEventsList(ref List<Event> eventsList, List<IBet> selectedBets)
+        {
+            foreach (var bet in selectedBets)
+            {
+                foreach(var event_ in bet.GetBetEvents())
+                {
+                    eventsList.RemoveAll(x => ((x.Index == event_.Index) && (x.Label == event_.Label)));
+                }
+            }
+        }
+
+        private void EventsOnNextDay(ref List<Event> eventsList)
         {
             var limitDate = DateTime.Now.Date.AddDays(1).AddHours(23).AddMinutes(59).AddSeconds(59);
             var removeCounterByTime = eventsList.RemoveAll(x => x.EventDateTime > limitDate);
             logger.InfoFormat("Removed {0} events that are not on next day.", removeCounterByTime);
-            
-            /*
+        }
+
+        private void ReduceEvents(ref List<Event> eventsList)
+        {
             var tmpOdd = 1.01;
             while (eventsList.Count > Setts.BetParams.MaxEventsToProcess)
             {
@@ -121,8 +152,8 @@ namespace PlacardAnalyser.Analyser
                logger.InfoFormat("{0} events removed for odd {1}", removeCounter, tmpOdd);
             }
             logger.InfoFormat("Remaining events: {0}",eventsList.Count);
-            */
             
+            /*
             while (eventsList.Count > Setts.BetParams.MaxEventsToProcess)
             {
                 Setts.BetParams.Risk -= (decimal)0.01;
@@ -130,7 +161,7 @@ namespace PlacardAnalyser.Analyser
                 logger.InfoFormat("{0} events removed for risk {1}", removeCounter, Setts.BetParams.Risk);
             }
             logger.InfoFormat("Remaining events: {0}",eventsList.Count);
-            
+            */
         }
 
         private List<IBet> GenerateBets(ref List<Event> eventsList)
@@ -141,8 +172,9 @@ namespace PlacardAnalyser.Analyser
             logger.Info("Getting Combine bets...");
             result.AddRange(GenerateCombineBets(ref eventsList));
 
-            logger.Info("Getting Multiple bets...");
-            result.AddRange(GenerateMultipleBets(ref eventsList));
+            // ReduceEvents(ref eventsList);
+            // logger.Info("Getting Multiple bets...");
+            // result.AddRange(GenerateMultipleBets(ref eventsList));
 
             return result;
         }
@@ -334,6 +366,46 @@ namespace PlacardAnalyser.Analyser
             return result;
         }
 
+        private List<IBet> SelectedMultipleBets(ref List<IBet> generatedMultipleBets)
+        {
+            List<IBet> result = new List<IBet>();
+            Dictionary<string,int> eventCounter = new Dictionary<string, int>();
+            var list1 = generatedMultipleBets.OrderByDescending(x =>x.CalcGainRatio());
+            foreach (var bet in list1)
+            {
+                if (result.Count >= 3)
+                {
+                    break;
+                }
+                bool flag = true;
+                foreach(var event_ in bet.GetBetEvents())
+                {
+                    var key = string.Format("{0} - {1}",event_.Index, event_.Label);
+                    if (eventCounter.ContainsKey(key))
+                    {
+                        if (eventCounter[key] >= 2)
+                        {
+                            flag = false;
+                            break;
+                        }
+                        else
+                        {
+                            eventCounter[key]++;
+                        }
+                    }
+                    else
+                    {
+                        eventCounter.Add(key,1);
+                    }
+                }
+                if (flag)
+                {
+                    result.Add(bet);
+                }
+            }
+            return result;
+        }
+
         private void SendBets(List<IBet> selectedBets)
         {
             // create new class to create the email and send it 
@@ -491,18 +563,32 @@ namespace PlacardAnalyser.Analyser
         private void StoreBets(List<IBet> selectedBets)
         {
             logger.Info("Storing bets...");
+            try
+            {
             switch (Setts.Storage.Type.ToUpper())
             {
                 case "MONGODB":
+                    try
+                    {
                     logger.Info("Storing on MongoDb database...");
                     var mongoFactory = new MongoDbFactory(Setts.Storage.ConnectionString,Setts.Storage.Database);
                     mongoFactory.SaveBets(selectedBets);
                     logger.InfoFormat("Stored on {0} in {1}"
                         ,Setts.Storage.ConnectionString
                         ,Setts.Storage.Database);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error("Error on mongodb connection: ",ex);
+                    }
                     break;
                 default:
                     break;
+            }
+            }
+            catch(Exception ex)
+            {
+                logger.InfoFormat("No database available on {0}",Setts.Storage.ConnectionString);
             }
         }
     }
